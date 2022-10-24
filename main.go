@@ -4,15 +4,16 @@ import (
   "os"
   "os/signal"
   "syscall"
-
+ 
   // Make sure you change this line to match your module
-  "github.com/bobbytables/go-and-compose/apiserver"
+  "github.com/mylvgianty/go/apiserver"
   "github.com/sirupsen/logrus"
   "github.com/urfave/cli/v2"
 )
 
 const (
   apiServerAddrFlagName string = "addr"
+  apiServerStorageDatabaseURL string = "postgres://local-dev@db/api?sslmode=disable"
 )
 
 func main() {
@@ -47,9 +48,16 @@ func apiServerCmd() *cli.Command {
         <-done
         close(stopper)
       }()
-
+      databaseURL := c.String(apiServerStorageDatabaseURL)
+      s, err := storage.NewStorage(databaseURL)
+      if err != nil {
+              return fmt.Errorf("could not initialize storage: %w", err)
+      }
       addr := c.String(apiServerAddrFlagName)
-      server, err := apiserver.NewAPIServer(addr)
+      server, err := apiserver.NewAPIServer(addr, s)
+      if err != nil {
+              return err
+      }
       if err != nil {
         return err
       }
